@@ -58,9 +58,7 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
-
+    return custom_score(game,player)
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -84,9 +82,7 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
-
+    return custom_score(game,player)
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
@@ -257,8 +253,12 @@ class AlphaBetaPlayer(IsolationPlayer):
         depth = 1
         result = None
 
-        while self.time_left() > 0.0001:
+        while self.time_left() > self.TIMER_THRESHOLD:
             move_score , next_move = self.alphabeta(game,depth)
+
+            if next_move==None:
+                break            
+
             result = next_move
             depth = depth + 1
 
@@ -312,9 +312,13 @@ class AlphaBetaPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        
+        next_score,next_move = get_next_move(self,game,depth,True)
+
+        return next_move
 
 def get_next_move(player,game,depth,maxim):
+
+
     ub = 999999999
     best_score = -ub
 
@@ -342,6 +346,11 @@ def get_next_move(player,game,depth,maxim):
     if not maxim:
         best_score = ub
 
+    
+    if player.time_left() < player.TIMER_THRESHOLD:
+        return best_score,(-1,-1)
+
+
     for move in moves:
         #make this move, and get a copy of the board
         new_state = game.forecast_move(move)
@@ -356,7 +365,7 @@ def get_next_move(player,game,depth,maxim):
 
         if depth is not 1:
             #if I can look deeper then look one level deeper
-            next_score, _ = get_next_move(player,new_state,depth - 1, (not maxim))
+            next_score, _ = get_next_move(player, new_state , depth - 1, (not maxim))
             
             #if the best move on the next level is a win, then we are good!
             if maxim and next_score == float("inf"):

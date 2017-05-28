@@ -206,7 +206,7 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        _ , move = get_next_move(self,game,depth,True)
+        _ , move, _ , _ = get_next_move(self,game,depth,True)
 
         return move
 
@@ -310,9 +310,8 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         legal_moves = game.get_legal_moves()
 
-        player1 = game.active_player
-        player2 = game.inactive_player
-
+        _ , move , _ , _ =  get_next_move(self,game,depth,True)
+        return move
         
 
 def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = float("inf") ):
@@ -328,26 +327,35 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
     #get all the legal moves possible
     moves = game.get_legal_moves()
 
+    if alpha > beta:
+        if maxim:
+            return ninf, (-1,-1), alpha, beta
+        else:
+            return inf, (-1,-1), alpha, beta
+
     #if there are no legal moves this is not a preferable path
     if not moves:
         if maxim:
-            return ninf, (-1, -1)
+            return ninf, (-1, -1), alpha, beta
         else:
-            return inf, (-1, -1)
+            return inf, (-1, -1), alpha, beta
     
     #if the maximizing player has won in this state
     if maxim and game.utility(player) == inf:
-        return inf, move
+        return inf, move, alpha, beta
     
     if not maxim and game.utility(player) == ninf:
-        return ninf, move
+        return ninf, move, alpha, beta
 
     #if we are the minimizing player then have a very high value to minimize :)
     if not maxim:
         best_score = ub
     
     if player.time_left() < player.TIMER_THRESHOLD:
-        return best_score,(-1,-1)
+        return best_score,(-1,-1), alpha, beta
+
+    current_alpha = alpha
+    current_beta = beta
 
     for move in moves:
         #make this move, and get a copy of the board
@@ -355,23 +363,28 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 
         #if we win then the move is very very good!
         if maxim and new_state.utility(player) == inf:
-            return inf , move
+            return inf , move, alpha, beta
 
         #same for other player's pespective!
         if not maxim and new_state.utility(player) == ninf:
-            return ninf , move
+            return ninf , move, alpha, beta
 
         if depth is not 1:
             #if I can look deeper then look one level deeper
-            next_score, _ , alpha_next, beta_next = get_next_move(player, new_state , depth - 1, (not maxim))
+            next_score, _ , alpha_next, beta_next = get_next_move(player, new_state , depth - 1, (not maxim), current_alpha, current_beta)
+            
+            if alpha_next > current_alpha:
+                current_alpha = alpha_next
+            if beta_next < current_beta:
+                current_beta=beta_next
             
             #if the best move on the next level is a win, then we are good!
             if maxim and next_score == inf:
-                return inf , move
+                return inf , move, alpha, beta
 
             #same, but for other players perspective
             if not maxim and next_score == ninf:
-                return ninf , move
+                return ninf , move, alpha, beta
 
             if maxim and next_score == ninf:
                 continue
@@ -390,4 +403,4 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
                 best_move = move
                 best_score = score_of_board
 
-    return best_score , best_move
+    return best_score , best_move, current_alpha, current_beta

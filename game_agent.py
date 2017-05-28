@@ -254,9 +254,10 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         #optimize results
         while self.time_left() > self.TIMER_THRESHOLD:
-            _ , deeper_move = self.alphabeta(game,depth)         
-            result = deeper_move
-            depth = depth + 1
+            deeper_move = self.alphabeta(game,depth)
+            if deeper_move is not None:    
+                result = deeper_move
+                depth = depth + 1
 
         return result
 
@@ -310,11 +311,15 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         legal_moves = game.get_legal_moves()
 
-        _ , move , _ , _ =  get_next_move(self,game,depth,True)
-        return move
+        _ , predicted_move , _ , _ =  get_next_move(self,game,depth,True)
+
+        return predicted_move
         
 
 def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = float("inf") ):
+
+    if player.time_left() < player.TIMER_THRESHOLD:
+        return None,None,None,None
 
     inf = float("inf")
     ninf = -inf
@@ -345,9 +350,7 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
     #if we are the minimizing player then have a very high value to minimize :)
     if not maxim:
         best_score = ub
-    
-    if player.time_left() < player.TIMER_THRESHOLD:
-        return best_score,(-1,-1), alpha, beta
+
 
     current_alpha = alpha
     current_beta = beta
@@ -368,13 +371,8 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
             #if I can look deeper then look one level deeper
             next_score, _ , alpha_next, beta_next = get_next_move(player, new_state , depth - 1, (not maxim), current_alpha, current_beta)
 
-            if maxim:
-                if alpha_next > current_alpha:
-                    current_alpha = alpha_next
-
-            if not maxim:
-                if beta_next < current_beta:
-                    current_beta = beta_next   
+            if next_score is None:
+                return None,None,None,None
             
             #if the best move on the next level is a win, then we are good!
             if maxim and next_score == inf:
@@ -389,6 +387,14 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
                 
             if not maxim and next_score == inf:
                 continue
+
+            if maxim:
+                if alpha_next > current_alpha:
+                    current_alpha = alpha_next
+
+            if not maxim:
+                if beta_next < current_beta:
+                    current_beta = beta_next   
                 
             #if this move is the best we can make on this level, save it.
             if (maxim and next_score > best_score) or (not maxim and next_score < best_score):

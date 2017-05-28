@@ -34,9 +34,7 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
-
+    return len(game.get_legal_moves())
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -212,75 +210,10 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        result = self.solve(game,depth,True)
+        _ , move = get_next_move(self,game,depth,True)
 
-        return result[1]
+        return move
 
-    def solve(self,game,depth,maxim):
-
-        best_score = None
-        best_move = (-1,-1)
-
-        #get all the legal moves possible
-        moves = game.get_legal_moves()
-
-        #if there are no legal moves this is not a preferable path
-        if not moves:
-            if maxim:
-                return (float("-inf"), (-1, -1))
-            else:
-                return (float("inf"), (-1, -1))
-        
-        if maxim:
-            best_score = -999999999
-        else:
-            best_score = 9999999999
-
-        for move in moves:
-            #make this move, and get a copy of the board
-            new_state = game.forecast_move(move)
-
-            #if we win with this move this move is very very good!
-            if maxim and new_state.utility(self)==float("inf"):
-                return (float("inf"),move)
-            #same)
-            if not maxim and new_state.utility(self)==float("-inf"):
-                return (float("-inf"),move)
-
-            if depth is not 1:
-
-                #if we haven't looked deep enough, look one level deeper
-                score = self.solve(new_state,depth - 1, (not maxim))
-                
-                #if the best move on the next level is a win, they we are good!
-                if maxim and score[0] == float("inf"):
-                    return (float("inf"),move)
-
-                #same, but for other players perspective
-                if not maxim and score[0] == float("-inf"):
-                    return (float("-inf"),move)
-                    
-                #if this move is the best we can make on this level, save it.
-                if (maxim and score[0] > best_score) or (not maxim and score[0] < best_score):
-                    best_move = move
-                    best_score = score[0]
-            else:
-
-                if maxim and new_state.utility(self)==float("inf"):
-                    return (float("inf"),move)
-
-                if not maxim and new_state.utility(self)==float("-inf"):
-                    return (float("-inf"),move)
-                    
-                future = new_state.get_legal_moves()
-
-                score_of_board = len(future)
-                
-                if (maxim and score_of_board > best_score) or (not maxim and score_of_board < best_score):
-                    best_move=move
-                    best_score=score_of_board
-
-        return (best_score,best_move)
 
 class AlphaBetaPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using iterative deepening minimax
@@ -318,10 +251,18 @@ class AlphaBetaPlayer(IsolationPlayer):
             Board coordinates corresponding to a legal move; may return
             (-1, -1) if there are no available legal moves.
         """
+
         self.time_left = time_left
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        depth = 1
+        result = None
+
+        while self.time_left() > 0.0001:
+            move_score , next_move = self.alphabeta(game,depth)
+            result = next_move
+            depth = depth + 1
+
+        return result
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
         """Implement depth-limited minimax search with alpha-beta pruning as
@@ -371,5 +312,76 @@ class AlphaBetaPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        
+
+def get_next_move(player,game,depth,maxim):
+    ub = 999999999
+    best_score = -ub
+
+    #sometimes the best move is .. no move
+    best_move = (-1,-1)
+
+    #get all the legal moves possible
+    moves = game.get_legal_moves()
+
+    #if there are no legal moves this is not a preferable path
+    if not moves:
+        if maxim:
+            return float("-inf"), (-1, -1)
+        else:
+            return float("inf"), (-1, -1)
+    
+    #if the maximizing player has won in this state
+    if maxim and game.utility(player) == float("inf"):
+        return float("inf"), move
+    
+    if not maxim and game.utility(player) == float("-inf"):
+        return float("-inf"), move
+
+    #if we are the minimizing player then have a very high value to minimize :)
+    if not maxim:
+        best_score = ub
+
+    for move in moves:
+        #make this move, and get a copy of the board
+        new_state = game.forecast_move(move)
+
+        #if we win with this move this move is very very good!
+        if maxim and new_state.utility(player) == float("inf"):
+            return float("inf") , move
+
+        #same for other player's pespective!
+        if not maxim and new_state.utility(player) == float("-inf"):
+            return float("-inf") , move
+
+        if depth is not 1:
+            #if I can look deeper then look one level deeper
+            next_score, _ = get_next_move(player,new_state,depth - 1, (not maxim))
+            
+            #if the best move on the next level is a win, then we are good!
+            if maxim and next_score == float("inf"):
+                return float("inf") , move
+
+            #same, but for other players perspective
+            if not maxim and next_score == float("-inf"):
+                return float("-inf") , move
+
+            if maxim and next_score == float("-inf"):
+                continue
+                
+            if not maxim and next_score == float("inf"):
+                continue
+                
+            #if this move is the best we can make on this level, save it.
+            if (maxim and next_score > best_score) or (not maxim and next_score < best_score):
+                best_move = move
+                best_score = next_score
+        else:
+            score_of_board = player.score(new_state , player)
+            
+            if (maxim and score_of_board > best_score) or (not maxim and score_of_board < best_score):
+                best_move = move
+                best_score = score_of_board
+
+    return best_score , best_move
+    

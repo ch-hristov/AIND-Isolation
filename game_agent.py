@@ -315,6 +315,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         
 
 def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = float("inf") ):
+
     inf = float("inf")
     ninf = -inf
 
@@ -327,14 +328,8 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
     #get all the legal moves possible
     moves = game.get_legal_moves()
 
-    if alpha > beta:
-        if maxim:
-            return ninf, (-1,-1), alpha, beta
-        else:
-            return inf, (-1,-1), alpha, beta
-
     #if there are no legal moves this is not a preferable path
-    if not moves:
+    if not moves or alpha > beta:
         if maxim:
             return ninf, (-1, -1), alpha, beta
         else:
@@ -372,11 +367,14 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
         if depth is not 1:
             #if I can look deeper then look one level deeper
             next_score, _ , alpha_next, beta_next = get_next_move(player, new_state , depth - 1, (not maxim), current_alpha, current_beta)
-            
-            if alpha_next > current_alpha:
-                current_alpha = alpha_next
-            if beta_next < current_beta:
-                current_beta=beta_next
+
+            if maxim:
+                if alpha_next > current_alpha:
+                    current_alpha = alpha_next
+
+            if not maxim:
+                if beta_next < current_beta:
+                    current_beta = beta_next   
             
             #if the best move on the next level is a win, then we are good!
             if maxim and next_score == inf:
@@ -402,5 +400,10 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
             if (maxim and score_of_board > best_score) or (not maxim and score_of_board < best_score):
                 best_move = move
                 best_score = score_of_board
+                
+                if (maxim and score_of_board>current_alpha):
+                    current_alpha=score_of_board
+                if  ((not maxim) and score_of_board < current_beta):
+                    current_beta=score_of_board
 
     return best_score , best_move, current_alpha, current_beta

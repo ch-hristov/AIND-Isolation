@@ -62,8 +62,8 @@ def custom_score_2(game, player):
 	pm = len(game.get_legal_moves(player))
 	om = len(game.get_legal_moves(game.get_opponent(player)))
 
-	#if this valus is bigger something good is happening! ( most of the time )
-	return pm-om
+	#if this valus is bigger something good is happening!  ( most of the time )
+	return pm - om
 
 def custom_score_3(game, player):
 	"""Calculate the heuristic value of a game state from the point of view
@@ -87,17 +87,17 @@ def custom_score_3(game, player):
 	float
 		The heuristic value of the current game state to the specified player.
 	"""
-	c_y,c_x= int(game.height / 2), int(game.width / 2)
-	p_y, p_x= game.get_player_location(player)
-	o_y,o_x= game.get_player_location(game.get_opponent(player)) 
+	c_y,c_x = int(game.height / 2), int(game.width / 2)
+	p_y, p_x = game.get_player_location(player)
+	o_y,o_x = game.get_player_location(game.get_opponent(player)) 
 
-	dpy=abs(p_y-c_y)
-	dpx=abs(p_x-c_x)
+	dpy = abs(p_y - c_y)
+	dpx = abs(p_x - c_x)
 
-	doy=abs(o_y - c_y)
-	dox=abs(o_x - c_x)
+	doy = abs(o_y - c_y)
+	dox = abs(o_x - c_x)
 
-	return (dpy*dpx) + -1*(doy*dox);
+	return (dpy * dpx) + -1 * (doy * dox)
 
 class IsolationPlayer:
 	"""Base class for minimax and alphabeta agents -- this class is never
@@ -128,8 +128,10 @@ class IsolationPlayer:
 		self.TIMER_THRESHOLD = timeout
 
 	def end_search(self):
+
 		if self.time_left() < self.TIMER_THRESHOLD:
 			return True
+
 		return False
 
 
@@ -223,7 +225,14 @@ class MinimaxPlayer(IsolationPlayer):
 				each helper function or else your agent will timeout during
 				testing.
 		"""
-		_ , move = get_next_move(self, game, depth,True)
+		move = (-1,-1)
+
+		try:
+
+			_ , move = get_next_move(self, game, depth)
+
+		except SearchTimeout:
+			pass
 
 		return move
 
@@ -272,15 +281,14 @@ class AlphaBetaPlayer(IsolationPlayer):
 
 		debug = False
 
-		#optimize results
-		while debug or not self.end_search():
-			deeper_move = self.alphabeta( game, depth )
-
-			if deeper_move is not None:    
+		while not self.end_search():
+			#optimize results
+			try:
+				score, deeper_move = self.alphabeta(game, depth)
 				result = deeper_move
 				depth = depth + 1
-			else:
-				break
+			except SearchTimeout:
+				pass
 
 		return result
 
@@ -329,15 +337,15 @@ class AlphaBetaPlayer(IsolationPlayer):
 				each helper function or else your agent will timeout during
 				testing.
 		"""
-		_ , predicted_move = get_next_move(self,game,depth,True)
-
-		return predicted_move
+		return get_next_move(self,game,depth)
 		
 
-def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = float("inf") ):
+def get_next_move(player, game, depth, maxim = True, alpha=float("-inf"), beta=float("inf")):
+
 	#if we timeout bubble up immediately..
+
 	if player.end_search():
-		return None, None
+		raise SearchTimeout()
 
 	inf = float("inf")
 	ninf = -inf
@@ -345,7 +353,7 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 	ub = inf
 	best_score = -ub
 
-	#sometimes the best move is .. no move
+	#sometimes the best move is ..  no move
 	best_move = (-1,-1)
 
 	moves = game.get_legal_moves()
@@ -353,9 +361,6 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 	#if we are the minimizing player then have a very high value to minimize :)
 	if not maxim:
 		best_score = ub
-
-	current_alpha = alpha
-	current_beta = beta
 
 	for move in moves:
 		#make this move, and get a copy of the board
@@ -371,24 +376,17 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 
 		if depth is not 1:
 			#if I can look deeper then look one level deeper
-			next_score, _ = get_next_move(player, new_state , depth - 1, (not maxim), current_alpha, current_beta)
-
-			#this only happens in case of timeout, in this case we terminate as fast as we possibly can!
-			if next_score is None:
-				return None, None
+			next_score, _ = get_next_move(player, new_state , depth - 1, (not maxim), alpha, beta)
 
 			if maxim:
-				if next_score >= current_alpha:
-					current_alpha = next_score
+				if next_score >= alpha:
+					alpha = next_score
 			else:
-				if next_score <= current_beta:
-					current_beta = next_score
+				if next_score <= beta:
+					beta = next_score
 
-			if maxim and next_score >= current_beta:
-				return next_score,move	
-
-			if not maxim and next_score <= current_alpha:
-				return next_score,move
+			if (maxim and next_score >= beta) or (not maxim and next_score <= alpha):
+				return best_score, best_move
 				
 			#if this move is the best we can make on this level, save it.
 			if (maxim and next_score > best_score) or (not maxim and next_score < best_score):
@@ -397,12 +395,6 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 
 		else:
 			score_of_board = player.score(new_state, player)
-
-			if maxim and score_of_board > current_alpha:
-				current_alpha = score_of_board
-
-			if (not maxim) and score_of_board < current_beta:
-				current_beta = score_of_board
 			
 			if (maxim and score_of_board > best_score) or (not maxim and score_of_board < best_score):
 				best_move = move

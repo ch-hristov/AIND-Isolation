@@ -378,14 +378,14 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 				return None, None
 
 			if maxim:
-				if next_score > current_alpha:
+				if next_score >= current_alpha:
 					current_alpha = next_score
 			else:
-				if next_score < current_beta:
+				if next_score <= current_beta:
 					current_beta = next_score
 
 			if maxim and next_score >= current_beta:
-				return next_score,move
+				return next_score,move	
 
 			if not maxim and next_score <= current_alpha:
 				return next_score,move

@@ -315,7 +315,9 @@ class AlphaBetaPlayer(IsolationPlayer):
 		
 
 def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = float("inf") ):
-	if player.time_left() < player.TIMER_THRESHOLD:
+
+	#if we timeout bubble up immediately..
+	if player.time_left() < (player.TIMER_THRESHOLD * 0.8):
 	    return None, None, None, None
 
 	inf = float("inf")
@@ -395,14 +397,15 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 			if (maxim and next_score > best_score) or (not maxim and next_score < best_score):
 				best_move = move
 				best_score = next_score
+
 		else:
 			score_of_board = player.score(new_state, player)
 
 			if maxim and score_of_board > current_alpha:
-				current_alpha=score_of_board
+				current_alpha = score_of_board
 
 			if (not maxim) and score_of_board < current_beta:
-				current_beta=score_of_board
+				current_beta = score_of_board
 			
 			if (maxim and score_of_board > best_score) or (not maxim and score_of_board < best_score):
 				best_move = move

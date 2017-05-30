@@ -58,7 +58,12 @@ def custom_score_2(game, player):
 	float
 		The heuristic value of the current game state to the specified player.
 	"""
-	return custom_score(game,player)
+
+	pm = len(game.get_legal_moves(player))
+	om = len(game.get_legal_moves(game.get_opponent(player)))
+
+	#if this valus is bigger something good is happening! ( most of the time )
+	return pm-om
 
 def custom_score_3(game, player):
 	"""Calculate the heuristic value of a game state from the point of view
@@ -82,7 +87,17 @@ def custom_score_3(game, player):
 	float
 		The heuristic value of the current game state to the specified player.
 	"""
-	return custom_score(game,player)
+	c_y,c_x= int(game.height / 2), int(game.width / 2)
+	p_y, p_x= game.get_player_location(player)
+	o_y,o_x= game.get_player_location(game.get_opponent(player)) 
+
+	dpy=abs(p_y-c_y)
+	dpx=abs(p_x-c_x)
+
+	doy=abs(o_y - c_y)
+	dox=abs(o_x - c_x)
+
+	return (dpy*dpx) + -1*(doy*dox);
 
 class IsolationPlayer:
 	"""Base class for minimax and alphabeta agents -- this class is never
@@ -111,6 +126,11 @@ class IsolationPlayer:
 		self.score = score_fn
 		self.time_left = None
 		self.TIMER_THRESHOLD = timeout
+
+	def end_search(self):
+		if self.time_left() < self.TIMER_THRESHOLD * 0.6:
+			return True
+		return False
 
 
 class MinimaxPlayer(IsolationPlayer):
@@ -203,12 +223,12 @@ class MinimaxPlayer(IsolationPlayer):
 				each helper function or else your agent will timeout during
 				testing.
 		"""
-		if self.time_left() < self.TIMER_THRESHOLD:
-			raise SearchTimeout()
-
 		_ , move, _ , _ = get_next_move(self,game,depth,True)
 
 		return move
+
+
+
 
 class AlphaBetaPlayer(IsolationPlayer):
 	"""Game-playing agent that chooses a move using iterative deepening minimax
@@ -253,11 +273,13 @@ class AlphaBetaPlayer(IsolationPlayer):
 		result = (-1,-1)
 
 		#optimize results
-		while self.time_left() > self.TIMER_THRESHOLD:
+		while not self.end_search():
 			deeper_move = self.alphabeta(game,depth)
 			if deeper_move is not None:    
 				result = deeper_move
 				depth = depth + 1
+			else:
+				break
 
 		return result
 
@@ -306,9 +328,6 @@ class AlphaBetaPlayer(IsolationPlayer):
 				each helper function or else your agent will timeout during
 				testing.
 		"""
-		if self.time_left() < self.TIMER_THRESHOLD:
-			raise SearchTimeout()
-
 		_ , predicted_move , _ , _ =  get_next_move(self,game,depth,True)
 
 		return predicted_move
@@ -317,8 +336,8 @@ class AlphaBetaPlayer(IsolationPlayer):
 def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = float("inf") ):
 
 	#if we timeout bubble up immediately..
-	if player.time_left() < (player.TIMER_THRESHOLD * 0.8):
-	    return None, None, None, None
+	if player.end_search():
+		return None, None, None, None
 
 	inf = float("inf")
 	ninf = -inf
@@ -343,6 +362,7 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 	if maxim and game.utility(player) == inf:
 		return inf, move, alpha, beta
 	
+	#if the other player wins with this move
 	if not maxim and game.utility(player) == ninf:
 		return ninf, move, alpha, beta
 

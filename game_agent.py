@@ -128,7 +128,7 @@ class IsolationPlayer:
 		self.TIMER_THRESHOLD = timeout
 
 	def end_search(self):
-		if self.time_left() < self.TIMER_THRESHOLD * 0.6:
+		if self.time_left() < self.TIMER_THRESHOLD:
 			return True
 		return False
 
@@ -223,11 +223,9 @@ class MinimaxPlayer(IsolationPlayer):
 				each helper function or else your agent will timeout during
 				testing.
 		"""
-		_ , move, _ , _ = get_next_move(self,game,depth,True)
+		_ , move = get_next_move(self, game, depth,True)
 
 		return move
-
-
 
 
 class AlphaBetaPlayer(IsolationPlayer):
@@ -272,9 +270,12 @@ class AlphaBetaPlayer(IsolationPlayer):
 		depth = 1
 		result = (-1,-1)
 
+		debug = False
+
 		#optimize results
-		while not self.end_search():
-			deeper_move = self.alphabeta(game,depth)
+		while debug or not self.end_search():
+			deeper_move = self.alphabeta( game, depth )
+
 			if deeper_move is not None:    
 				result = deeper_move
 				depth = depth + 1
@@ -328,16 +329,15 @@ class AlphaBetaPlayer(IsolationPlayer):
 				each helper function or else your agent will timeout during
 				testing.
 		"""
-		_ , predicted_move , _ , _ =  get_next_move(self,game,depth,True)
+		_ , predicted_move = get_next_move(self,game,depth,True)
 
 		return predicted_move
 		
 
 def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = float("inf") ):
-
 	#if we timeout bubble up immediately..
 	if player.end_search():
-		return None, None, None, None
+		return None, None
 
 	inf = float("inf")
 	ninf = -inf
@@ -348,23 +348,7 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 	#sometimes the best move is .. no move
 	best_move = (-1,-1)
 
-	#get all the legal moves possible
 	moves = game.get_legal_moves()
-
-	#if there are no legal moves this is not a preferable path
-	if not moves or alpha > beta:
-		if maxim:
-			return ninf, (-1, -1), alpha, beta
-		else:
-			return inf, (-1, -1), alpha, beta
-	
-	#if the maximizing player has won in this state
-	if maxim and game.utility(player) == inf:
-		return inf, move, alpha, beta
-	
-	#if the other player wins with this move
-	if not maxim and game.utility(player) == ninf:
-		return ninf, move, alpha, beta
 
 	#if we are the minimizing player then have a very high value to minimize :)
 	if not maxim:
@@ -379,39 +363,32 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 
 		#if we win then the move is very very good!
 		if maxim and new_state.utility(player) == inf:
-			return inf, move, alpha, beta
+			return inf, move
 
 		#same for other player's pespective!
 		if not maxim and new_state.utility(player) == ninf:
-			return ninf, move, alpha, beta
+			return ninf, move
 
 		if depth is not 1:
 			#if I can look deeper then look one level deeper
-			next_score, _ , alpha_next, beta_next = get_next_move(player, new_state , depth - 1, (not maxim), current_alpha, current_beta)
-			
+			next_score, _ = get_next_move(player, new_state , depth - 1, (not maxim), current_alpha, current_beta)
+
 			#this only happens in case of timeout, in this case we terminate as fast as we possibly can!
 			if next_score is None:
-				return None, None, None, None
-			
-			#if the best move on the next level is a win, then we are good!
-			if maxim and next_score == inf:
-				return inf , move, alpha, beta
+				return None, None
 
-			#same, but for other players perspective
-			if not maxim and next_score == ninf:
-				return ninf , move, alpha, beta
-			
-			#if this move is not good, skip it
-			if (maxim and next_score == ninf) or ( not maxim and next_score == inf ):
-				continue
-				
 			if maxim:
-				if alpha_next > current_alpha:
-					current_alpha = alpha_next
+				if next_score > current_alpha:
+					current_alpha = next_score
+			else:
+				if next_score < current_beta:
+					current_beta = next_score
 
-			if not maxim:
-				if beta_next < current_beta:
-					current_beta = beta_next   
+			if maxim and next_score >= current_beta:
+				return next_score,move
+
+			if not maxim and next_score <= current_alpha:
+				return next_score,move
 				
 			#if this move is the best we can make on this level, save it.
 			if (maxim and next_score > best_score) or (not maxim and next_score < best_score):
@@ -431,4 +408,4 @@ def get_next_move(player, game, depth, maxim , alpha = float("-inf"), beta = flo
 				best_move = move
 				best_score = score_of_board
 
-	return best_score , best_move, current_alpha, current_beta
+	return best_score , best_move
